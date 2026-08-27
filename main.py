@@ -110,7 +110,6 @@ def result_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="🎯 Сделать более официально", callback_data="edit:formal"),
             ],
             [
-                InlineKeyboardButton(text="➕ Новое сообщение", callback_data="edit:new"),
                 InlineKeyboardButton(text="🏠 Главное меню", callback_data="edit:menu"),
             ],
         ]
@@ -250,10 +249,8 @@ def create_router(kie_api_key: str) -> Router:
     async def receive_non_text_notes(message: Message) -> None:
         await message.answer("Отправьте заметки обычным текстовым сообщением.")
 
-    @router.callback_query(
-        MessageForm.ready, F.data.in_({"edit:new", "edit:menu"})
-    )
-    async def new_feedback(callback: CallbackQuery, state: FSMContext) -> None:
+    @router.callback_query(MessageForm.ready, F.data == "edit:menu")
+    async def return_to_menu(callback: CallbackQuery, state: FSMContext) -> None:
         await state.clear()
         await callback.answer()
         if callback.message:
