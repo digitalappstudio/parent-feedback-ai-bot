@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import re
 
 import aiohttp
 from aiogram import Bot, Dispatcher, F, Router
@@ -22,6 +23,10 @@ from dotenv import load_dotenv
 REVIEWER_TELEGRAM_ID = 328761045
 KIE_API_URL = "https://api.kie.ai/gemini-2.5-flash/v1/chat/completions"
 MENU_BUTTON_TEXT = "🏠 Главное меню"
+EMOJI_PUNCTUATION_RE = re.compile(
+    r"([\U0001F1E6-\U0001F1FF\U0001F300-\U0001FAFF\u2600-\u27BF]"
+    r"(?:\ufe0f|[\U0001F3FB-\U0001F3FF])*)[.,!?;:…]+"
+)
 
 START_TEXT = (
     "Здравствуйте! Я помогу быстро подготовить сообщение для родителей.\n\n"
@@ -142,6 +147,10 @@ def is_reviewer(user_id: int) -> bool:
     return user_id == REVIEWER_TELEGRAM_ID
 
 
+def clean_emoji_punctuation(text: str) -> str:
+    return EMOJI_PUNCTUATION_RE.sub(r"\1", text)
+
+
 def build_user_prompt(
     message_type: str, notes: str, action: str, current_result: str | None = None
 ) -> str:
@@ -214,7 +223,7 @@ async def generate_message(
     result = data["choices"][0]["message"]["content"]
     if not isinstance(result, str) or not result.strip():
         raise ValueError("Kie.ai returned an empty response")
-    return result.strip()
+    return clean_emoji_punctuation(result.strip())
 
 
 def create_router(kie_api_key: str) -> Router:
