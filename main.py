@@ -8,12 +8,20 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    Message,
+    ReplyKeyboardMarkup,
+)
 from dotenv import load_dotenv
 
 
 REVIEWER_TELEGRAM_ID = 328761045
 KIE_API_URL = "https://api.kie.ai/gemini-2.5-flash/v1/chat/completions"
+MENU_BUTTON_TEXT = "🏠 Главное меню"
 
 START_TEXT = (
     "Здравствуйте! Я помогу быстро подготовить сообщение для родителей.\n\n"
@@ -95,6 +103,15 @@ def type_keyboard() -> InlineKeyboardMarkup:
             [InlineKeyboardButton(text="💳 Оплата / напоминание", callback_data="type:payment")],
             [InlineKeyboardButton(text="✍️ Свободное сообщение", callback_data="type:free")],
         ]
+    )
+
+
+def persistent_menu_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=MENU_BUTTON_TEXT)]],
+        resize_keyboard=True,
+        is_persistent=True,
+        input_field_placeholder="Напишите заметки или откройте главное меню",
     )
 
 
@@ -206,6 +223,15 @@ def create_router(kie_api_key: str) -> Router:
             # Эта проверка пока ничего не ограничивает. Она оставлена как whitelist
             # для будущих лимитов: REVIEWER_TELEGRAM_ID должен обходить их всегда.
             is_reviewer(message.from_user.id)
+        await message.answer(
+            "Кнопка «🏠 Главное меню» всегда доступна внизу.",
+            reply_markup=persistent_menu_keyboard(),
+        )
+        await message.answer(START_TEXT, reply_markup=type_keyboard())
+
+    @router.message(F.text == MENU_BUTTON_TEXT)
+    async def persistent_main_menu(message: Message, state: FSMContext) -> None:
+        await state.clear()
         await message.answer(START_TEXT, reply_markup=type_keyboard())
 
     @router.callback_query(F.data.in_(MESSAGE_TYPES))
